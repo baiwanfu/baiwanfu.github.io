@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我们的打卡日记</title>
+  <!-- 引入html2canvas库：用于将HTML元素转为图片 -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    /* 全局样式重置 */
+  * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* 页面基础样式 - 适配移动端，柔和粉色系主题 */
+  body {
+      background: #fdf6f8;
+      padding: 15px;
+      max-width: 500px;
+      margin: 0 auto;
+  }
+
+  /* 主卡片容器 - 白色背景+圆角+轻微阴影，提升质感 */
+  .card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+      position: relative;
+      /* 新增：为音频按钮绝对定位做准备 */
+  }
+
+  /* ========== 简化的音频按钮样式 - 左上角表情图标 ========== */
+  .audio-btn-box {
+      position: absolute;
+      top: 15px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+  }
+
+  .audio-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+  }
+
+
+  .audio-name {
+      font-size: 12px;
+      color: #e65a7c;
+  }
+
+
+  /* 标题样式 - 粉色主色调，居中显示（调整padding避免被音频按钮遮挡） */
+  h1 {
+      text-align: center;
+      color: #e65a7c;
+      font-size: 24px;
+      margin-bottom: 8px;
+      padding-top: 10px;
+  }
+
+  /* 今日信息展示 - 显示当前时间和相识天数 */
+  .today-info {
+      text-align: center;
+      color: #666;
+      margin-bottom: 20px;
+      font-size: 15px;
+      white-space: pre-line;
+      /* 保留换行符，让文本分行显示 */
+  }
+
+  /* 当前选中日期提示 - 突出显示选中的日期状态 */
+  .selected-date {
+      text-align: center;
+      color: #e65a7c;
+      margin: 10px 0;
+      font-size: 14px;
+      font-weight: 500;
+  }
+
+  /* 打卡按钮基础样式 - 全屏宽度，圆角设计 */
+  .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      font-size: 16px;
+      margin: 10px 0;
+      font-weight: 500;
+      cursor: pointer;
+  }
+
+  /* 早安按钮样式 - 暖黄色调，对应早晨氛围 */
+  .morning {
+      background: #fff0d6;
+      color: #d48000;
+  }
+
+  /* 晚安按钮样式 - 浅蓝色调，对应夜晚氛围 */
+  .night {
+      background: #e0f5ff;
+      color: #1677ff;
+  }
+
+  /* 已完成打卡状态 - 灰色禁用样式 */
+  .done {
+      background: #eee !important;
+      color: #999 !important;
+      cursor: not-allowed;
+  }
+
+  /* 禁用状态样式 - 浅灰色，不可点击 */
+  .disabled {
+      background: #f2f2f2 !important;
+      color: #ccc !important;
+      cursor: not-allowed;
+  }
+
+  /* 统计数据容器 - 弹性布局，平分宽度 */
+  .stats {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+  }
+
+  /* 单个统计项 - 浅灰色背景，圆角卡片 */
+  .stat {
+      flex: 1;
+      background: #fafafa;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+  }
+
+  /* 统计数字样式 - 大号粉色字体，突出显示 */
+  .num {
+      font-size: 26px;
+      font-weight: bold;
+      color: #e65a7c;
+  }
+
+  /* 提示文本 - 小号灰色字体，说明规则 */
+  .tip {
+      text-align: center;
+      color: #888;
+      margin-top: 12px;
+      font-size: 14px;
+  }
+
+  /* 日历导航栏 - 左右切换按钮+中间标题 */
+  .calendar-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+  }
+
+  /* 日历切换按钮 - 圆形按钮，简洁样式 */
+  .nav-btn {
+      background: #f5f5f5;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+  }
+
+  /* 日历标题 - 显示当前年月 */
+  .calendar-title {
+      font-size: 18px;
+      color: #333;
+      font-weight: 500;
+  }
+
+  /* 星期栏 - 7列网格布局，显示星期几 */
+  .week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      color: #999;
+      font-size: 13px;
+      margin-bottom: 8px;
+  }
+
+  /* 日期网格容器 - 7列网格布局，显示日期 */
+  .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      touch-action: pan-x;
+      /* 移动端触摸优化 */
+  }
+
+  /* 单个日期样式 - 正方形，居中显示日期 */
+  .day {
+      aspect-ratio: 1/1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      border-radius: 8px;
+      background: #f8f8f8;
+      position: relative;
+      cursor: pointer;
+      padding: 4px;
+  }
+
+  /* 隐藏的日期 - 相识日前的日期不显示 */
+  .day.hidden {
+      background: transparent !important;
+      cursor: default !important;
+      pointer-events: none;
+      visibility: hidden;
+  }
+
+  /* 未来日期样式 - 浅灰色，不可点击 */
+  .day.future {
+      background: #fafafa;
+      color: #ccc;
+      cursor: not-allowed;
+  }
+
+  /* 选中日期样式 - 粉色边框，突出选中状态 */
+  .day.selected {
+      border: 2px solid #e65a7c;
+  }
+
+  /* 完整打卡日期样式 - 粉色背景，标记已完成全天打卡 */
+  .day.full-active {
+      background: #ffe6ec;
+      color: #e65a7c;
+      font-weight: bold;
+  }
+
+  /* 部分打卡日期样式 - 渐变背景，标记仅完成半天打卡 */
+  .day.half-active {
+      background: linear-gradient(to right, #ffe6ec 50%, #f8f8f8 50%);
+      color: #e65a7c;
+  }
+
+  /* 今日日期样式 - 粉色细边框，标记当天 */
+  .day.today {
+      border: 1.5px solid #e65a7c;
+  }
+
+  /* 相识日特殊样式 - 深粉色背景+粗边框，标记特殊日期 */
+  .day.meet-day {
+      background: #ffd1dc;
+      border: 2px solid #e65a7c;
+  }
+
+  /* 相识日标签 - 小号粉色字体，显示"相识日" */
+  .meet-day-label {
+      font-size: 8px;
+      color: #e65a7c;
+      font-weight: bold;
+      margin-top: 1px;
+      white-space: nowrap;
+  }
+
+  /* 打卡标记点 - 小粉点，标记完整打卡日期 */
+  .mark {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #e65a7c;
+  }
+
+  /* 兑换按钮 - 渐变粉色，突出重要操作（默认高亮） */
+  .exchange-btn {
+      margin-top: 12px;
+      padding: 16px;
+      background: linear-gradient(90deg, #f7777b, #f3c1b4);
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 14px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+      /* 增加点击反馈 */
+      transition: all 0.2s ease;
+  }
+
+  /* 兑换按钮点击态 */
+  .exchange-btn:active {
+      opacity: 0.8;
+      transform: scale(0.98);
+  }
+
+  /* 生气减卡按钮 - 渐变红色，警示性操作（默认高亮） */
+  .angry-btn {
+      margin-top: 12px;
+      padding: 16px;
+      background: linear-gradient(90deg, #ff6b81, #ff4757);
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 14px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+      /* 增加点击反馈 */
+      transition: all 0.2s ease;
+  }
+
+  /* 生气按钮点击态 */
+  .angry-btn:active {
+      opacity: 0.8;
+      transform: scale(0.98);
+  }
+
+  /* 图片生成容器 - 生成图片后显示，默认隐藏 */
+  .generate-card-container {
+      margin-top: 20px;
+      padding: 20px;
+      background: #fff;
+      border-radius: 16px;
+      text-align: center;
+      display: none;
+  }
+
+  /* 生成的图片样式 - 自适应宽度，粉色边框 */
+  .generate-card-img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 12px;
+      border: 2px solid #ffe6ec;
+      margin: 10px 0;
+  }
+
+  /* 保存图片按钮 - 渐变粉色，引导保存操作 */
+  .save-btn {
+      margin-top: 10px;
+      padding: 12px;
+      background: linear-gradient(90deg, #e65a7c, #ff8a9e);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      width: 80%;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+  }
+
+  /* 添加旋转动画 */
+  @keyframes rotate {
+      from {
+          transform: rotate(0deg);
+      }
+
+      to {
+          transform: rotate(360deg);
+      }
+  }
+
+  /* 应用动画到按钮（自动旋转） */
+  .audio-btn {
+      animation: rotate 8s linear infinite;
+      /* 8秒完成一次旋转，线性匀速，无限循环 */
+  }
+  </style>
+
+</head>
+
+<body>
+  <div class="card">
+    <!-- ========== 简化的音频按钮 - 左上角表情图标 ========== -->
+    <div class="audio-btn-box">
+      <button class="audio-btn" id="audioBtn">🔊</button>
+      <div class="audio-name" id="audioName" >----</div>
+    </div>
+    <h1>我们的打卡日记</h1>
+    <!-- 今日信息展示：当前时间+相识天数 -->
+    <div class="today-info" id="todayText"></div>
+
+    <!-- 当前选中日期提示 -->
+    <div class="selected-date" id="selectedDateText">当前选择：今日</div>
+
+    <!-- 打卡按钮：早安/晚安 -->
+    <button class="btn morning" id="btnMorning">☀️ 早安，开启美好的一天吧~</button>
+    <button class="btn night" id="btnNight">🌙 晚安，好好休息~</button>
+
+    <!-- 核心业务按钮：兑换见面卡 -->
+    <button class="exchange-btn" id="exchangeBtn">🎁 兑换见面卡（生成图片）</button>
+    <!-- 核心业务按钮：生气扣除见面卡 -->
+    <button class="angry-btn" id="angryBtn">😠 生气啦，扣除1张见面卡</button>
+
+    <!-- 统计数据区域：完整打卡天数+见面卡数量 -->
+    <div class="stats">
+      <div class="stat">
+        <div class="num" id="totalDays">0</div>
+        <div>累计完整打卡天数</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="meetCardNum">0</div>
+        <div>见面卡总数</div>
+      </div>
+    </div>
+
+    <!-- 规则提示文本 -->
+    <div class="tip" id="tipText">每完整打卡30天自动生成1张见面卡，生气可扣除</div>
+
+    <!-- 图片生成展示容器：生成后显示 -->
+    <div class="generate-card-container" id="generateCardContainer">
+      <h3>💌 你的专属打卡日记</h3>
+      <img class="generate-card-img" id="generateCardImg" src="" alt="打卡日记图片">
+      <button class="save-btn" id="saveImgBtn">📥 保存到相册</button>
+    </div>
+
+    <!-- 日历区域：选择日期+查看打卡状态 -->
+    <div class="calendar">
+      <div class="calendar-nav">
+        <button class="nav-btn" id="prevMonth">‹</button>
+        <div class="calendar-title" id="monthTitle"></div>
+        <button class="nav-btn" id="nextMonth">›</button>
+      </div>
+      <div class="week">
+        <div>日</div>
+        <div>一</div>
+        <div>二</div>
+        <div>三</div>
+        <div>四</div>
+        <div>五</div>
+        <div>六</div>
+      </div>
+      <div class="days" id="daysContainer"></div>
+    </div>
+  </div>
+
+  <!-- 音频元素 -->
+  <audio id="backgroundMusic" loop preload="auto"></audio>
+  <script>
+    // ===================== 全局常量定义 =====================
+      // 当前日期对象
+      const now = new Date();
+      // 今日日期字符串（YYYY-MM-DD）- 标准化格式，方便存储和比较
+      const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      // 当前选中的日期（默认今日）- 用于打卡操作的目标日期
+      let selectedDateStr = todayDateStr;
+      // 相识起始日期：2026年2月16日（月份从0开始）- 业务核心日期
+      const START_DATE = new Date(2026, 1, 16);
+      // 相识日字符串格式 - 用于快速比较
+      const MEET_DAY_STR = "2026-02-16";
+      // 日历当前显示的年月 - 控制日历视图
+      let currentViewYear, currentViewMonth;
+      // 定时器变量（用于时间更新）- 1秒更新一次当前时间
+      let timeUpdateTimer;
+      // 音频相关变量
+      let isAudioMuted = false; // 【修改1】默认改为未静音（开启播放）
+      let audioElement;
+      let audioName;
+
+      // ===================== 工具函数 =====================
+      /**
+       * 格式化日期为 YYYY-MM-DD 字符串
+       * @param {Date} date - 日期对象
+       * @returns {string} 格式化后的日期字符串
+       */
+      function formatDate(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+
+      /**
+       * 判断日期是否为未来日期（禁止未来日期打卡）
+       * @param {string} dateStr - 日期字符串（YYYY-MM-DD）
+       * @returns {boolean} 是否为未来日期
+       */
+      function isFutureDate(dateStr) {
+        const selectedDate = new Date(dateStr);
+        const today = new Date(todayDateStr);
+        // 重置时间为0点，仅比较日期（避免时分秒干扰）
+        selectedDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return selectedDate > today;
+      }
+
+      /**
+       * 判断日期是否在相识日之后（仅允许相识日后打卡）
+       * @param {string} dateStr - 日期字符串（YYYY-MM-DD）
+       * @returns {boolean} 是否在相识日之后
+       */
+      function isAfterStartDate(dateStr) {
+        const date = new Date(dateStr);
+        const start = new Date(START_DATE);
+        start.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
+        return date >= start;
+      }
+
+      /**
+       * 播放打卡成功提示音效（提升用户体验）
+       */
+      function playSound() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+
+          // 温馨双音调音效：先高后低，柔和不刺耳
+          o.type = "sine";
+          o.frequency.setValueAtTime(900, ctx.currentTime);
+          o.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
+
+          g.gain.value = 0.1; // 音量控制
+          o.connect(g);
+          g.connect(ctx.destination);
+
+          o.start();
+          // 音效渐变消失，避免突兀
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+          o.stop(ctx.currentTime + 0.2);
+        } catch (e) {
+          // 兼容不支持AudioContext的浏览器，静默失败
+        }
+      }
+
+      // ===================== 简化的音频控制函数 =====================
+      /**
+       * 初始化音频播放器
+       */
+
+
+      // ===================== 全局常量定义 =====================
+      let currentAudioIndex = -1; // 当前播放的歌曲索引（初始为-1表示未播放）
+
+      // 音频列表（包含多首歌曲）
+      let audioList = [
+        { src: './audio/倒带-蔡依林.mp3', name: '倒带' },
+        { src: './audio/告白气球-周杰伦.mp3', name: '告白气球' },
+        { src: './audio/搁浅-周杰伦.mp3', name: '搁浅' },
+        { src: './audio/晴天-周杰伦.mp3', name: '晴天' },
+        { src: './audio/枫-周杰伦.mp3', name: '枫' },
+        { src: './audio/珊瑚海-周杰伦.mp3', name: '珊瑚海' },
+        { src: './audio/稻香-周杰伦.mp3', name: '稻香' },
+        { src: './audio/等你下课-周杰伦.mp3', name: '等你下课' },
+        { src: './audio/简单爱-周杰伦.mp3', name: '简单爱' },
+        { src: './audio/花海-周杰伦.mp3', name: '花海' },
+        { src: './audio/说好的幸福呢-周杰伦.mp3', name: '说好的幸福呢' },
+      ];
+
+      /**
+       * 随机选择一首歌曲
+       * @returns {Object} 返回选中的歌曲对象
+       */
+      function getRandomSong() {
+        const randomIndex = Math.floor(Math.random() * audioList.length);
+        return audioList[randomIndex];
+      }
+
+      /**
+       * 初始化音频播放器（支持随机播放）
+       */
+      function initAudio() {
+        audioElement = document.getElementById('backgroundMusic');
+        audioName = document.getElementById('audioName');
+
+        // 设置默认音量
+        audioElement.volume = 0.5;
+
+        // 随机选择第一首歌曲
+        const randomSong = getRandomSong();
+        audioElement.src = randomSong.src;
+        audioName.innerText = randomSong.name;
+        // 预加载音频
+        audioElement.load();
+
+        // 【修改2】页面初始化时自动尝试播放音乐
+        if (!isAudioMuted) {
+          audioElement.play().catch(err => {
+            // 浏览器自动播放策略限制，提示用户手动开启
+            console.log('自动播放失败，需要用户交互后播放：', err);
+            isAudioMuted = true; // 回滚为静音状态
+            updateAudioButton();
+          });
+        }
+
+        // 监听歌曲结束事件，自动播放下一首随机歌曲
+        audioElement.onended = () => {
+          const nextSong = getRandomSong();
+          audioElement.src = nextSong.src;
+          audioElement.load();
+          if (!isAudioMuted) {
+            audioElement.play().catch(err => {
+              console.log('播放下一首失败：', err);
+            });
+          }
+        };
+
+        // 更新按钮状态
+        updateAudioButton();
+      }
+
+      /**
+       * 切换音频播放/静音状态（核心功能）
+       */
+      function toggleAudio() {
+        isAudioMuted = !isAudioMuted;
+
+        if (isAudioMuted) {
+          audioElement.pause();
+        } else {
+          // 解决浏览器自动播放策略限制
+          audioElement.play().catch(err => {
+            alert('🎵 需要你手动授权播放音乐哦～');
+            isAudioMuted = true;
+            updateAudioButton();
+          });
+        }
+
+        // 更新按钮图标
+        updateAudioButton();
+      }
+
+      /**
+       * 更新音频按钮的图标（仅切换🔇/🔊表情）
+       */
+      function updateAudioButton() {
+        const audioBtn = document.getElementById('audioBtn');
+        if (isAudioMuted) {
+          audioBtn.innerHTML = '🔇'; // 静音图标
+          audioBtn.title = '点击播放音乐';
+        } else {
+          audioBtn.innerHTML = '🔊'; // 播放图标
+          audioBtn.title = '点击暂停音乐';
+        }
+      }
+
+      // ===================== 数据存储相关 =====================
+      /**
+       * 初始化默认数据（首次使用时的初始状态）
+       * @returns {Object} 初始数据对象
+       */
+      function initData() {
+        return {
+          records: {},          // 打卡记录 {日期: {morning: boolean, night: boolean}}
+          totalDays: 0,         // 累计完整打卡天数（早安+晚安都打卡）
+          meetCard: 0,          // 当前可用见面卡数量（初始0张）
+          generatedCards: 0,    // 打卡生成的总卡数（每30天1张，初始0张）
+          deductedCards: 0      // 生气扣除的卡数
+        };
+      }
+
+      /**
+       * 获取本地存储数据（兼容旧数据，避免升级后数据丢失）
+       * @returns {Object} 解析后的数据对象
+       */
+      function getData() {
+        const d = localStorage.getItem("loveData");
+        if (!d) return initData();
+
+        const data = JSON.parse(d);
+        // 兼容旧数据，补充缺失字段（向后兼容）
+        if (data.generatedCards === undefined) data.generatedCards = 0;
+        if (data.deductedCards === undefined) data.deductedCards = 0;
+        if (data.meetCard === undefined) data.meetCard = 0;
+        if (data.totalDays === undefined) data.totalDays = 0;
+
+        return data;
+      }
+
+      /**
+       * 保存数据到本地存储（持久化数据，刷新页面不丢失）
+       * @param {Object} data - 要保存的数据对象
+       */
+      function saveData(data) {
+        localStorage.setItem("loveData", JSON.stringify(data));
+      }
+
+      // ===================== 核心业务逻辑 =====================
+      /**
+       * 计算累计完整打卡天数（早安+晚安都打卡才算1天）
+       * @returns {number} 完整打卡天数
+       */
+      function calculateCompleteDays() {
+        const data = getData();
+        let completeDays = 0;
+
+        // 遍历所有打卡记录，统计完整打卡天数
+        for (const dateStr in data.records) {
+          const record = data.records[dateStr];
+          if (record.morning && record.night) {
+            completeDays++;
+          }
+        }
+
+        return completeDays;
+      }
+
+      /**
+       * 检查并更新见面卡奖励（核心规则：每30天完整打卡生成1张）
+       */
+      function checkReward() {
+        const data = getData();
+        const completeDays = calculateCompleteDays();
+        // 计算应生成的卡数（从0开始，每30天1张）
+        const shouldGenerate = Math.floor(completeDays / 30);
+
+        data.generatedCards = shouldGenerate;
+        // 可用卡数 = 生成数 - 扣除数（最小为0，避免负数）
+        data.meetCard = Math.max(0, data.generatedCards - data.deductedCards);
+        data.totalDays = completeDays;
+
+        saveData(data);
+      }
+
+      /**
+       * 生成打卡日记图片（核心功能：将页面转为图片）
+       * @returns {Promise<string>} 图片Base64 URL
+       */
+      function generateCardImage() {
+        return new Promise((resolve, reject) => {
+          const cardElement = document.querySelector('.card');
+
+          html2canvas(cardElement, {
+            scale: 2,               // 2倍分辨率，保证图片清晰
+            useCORS: true,          // 允许跨域图片（避免生成失败）
+            logging: false,         // 关闭日志，减少控制台输出
+            backgroundColor: '#fdf6f8' // 背景色与页面一致，避免白底
+          }).then(canvas => {
+            // 转为PNG格式的Base64 URL
+            resolve(canvas.toDataURL('image/png'));
+          }).catch(err => {
+            // 捕获生成失败的异常
+            reject(err);
+          });
+        });
+      }
+
+      /**
+       * 保存图片到相册（适配移动端/桌面端）
+       * @param {string} imgUrl - 图片Base64 URL
+       */
+      function saveImageToAlbum(imgUrl) {
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = imgUrl;
+
+        // 生成带日期的文件名，便于区分
+        const now = new Date();
+        const fileName = `打卡日记_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.png`;
+        link.download = fileName;
+
+        // 触发下载（兼容所有浏览器）
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // 移动端友好提示，指导保存操作
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          alert("📸 图片已开始下载！\n- 苹果手机：点击右上角分享→保存图片\n- 安卓手机：长按图片→保存到相册");
+        } else {
+          alert("📸 图片已下载到本地！");
+        }
+        const imgContainer = document.getElementById("generateCardContainer");
+        imgContainer.style.display = "none";
+      }
+
+      /**
+       * 兑换见面卡（核心业务：扣除1张卡+生成图片）
+       */
+      function exchange() {
+        const data = getData();
+
+        // 严格校验：卡数不足时提示（核心判断逻辑）
+        if (data.meetCard < 1) {
+          alert(`💌 当前见面卡数量为 ${data.meetCard} 张，不足兑换！\n每完整打卡30天可生成1张见面卡，快让他继续加油吧～`);
+          return;
+        }
+
+        // 扣除见面卡（先扣卡，生成失败会回滚）
+        data.meetCard -= 1;
+        saveData(data);
+
+        // 生成图片
+        alert("✨ 正在生成你的专属打卡日记...");
+        generateCardImage().then(imgUrl => {
+          // 显示图片容器
+          const imgContainer = document.getElementById("generateCardContainer");
+          const imgElement = document.getElementById("generateCardImg");
+
+          imgElement.src = imgUrl;
+          imgContainer.style.display = "block";
+
+          // 绑定保存按钮事件（点击保存图片）
+          document.getElementById("saveImgBtn").onclick = () => {
+            saveImageToAlbum(imgUrl);
+          };
+
+          alert(`✅ 兑换成功！已扣除1张见面卡，当前剩余：${data.meetCard}张\n图片已生成，可点击保存到相册～`);
+          // 重新渲染页面，更新数据显示
+          renderAll();
+        }).catch(err => {
+          // 捕获图片生成失败的异常
+          console.error("图片生成失败：", err);
+          alert("😥 图片生成失败，请重试！");
+          // 生成失败，回滚卡数（数据一致性）
+          data.meetCard += 1;
+          saveData(data);
+          renderAll();
+        });
+      }
+
+      /**
+       * 生气扣除见面卡（核心业务：扣除卡数，需二次确认）
+       */
+      function deductCard() {
+        const data = getData();
+        data.deductedCards = data.deductedCards || 0;
+        data.generatedCards = data.generatedCards || 0;
+
+        // 严格校验：无卡可扣时提示（核心判断逻辑）
+        const availableDeduct = data.generatedCards - data.deductedCards;
+        if (availableDeduct <= 0) {
+          alert(`😢 当前可扣除的见面卡数量为 0 张！\n已生成卡数：${data.generatedCards}张 | 已扣除卡数：${data.deductedCards}张\n需要先打卡积累见面卡才能扣除哦～`);
+          return;
+        }
+
+        // 二次确认：防止误操作，提示当前可扣除数量
+        if (!confirm(`😠 确定要扣除1张见面卡吗？\n当前可扣除数量：${availableDeduct}张\n扣除后需要重新打卡积累哦～`)) {
+          return;
+        }
+
+        // 执行扣除操作
+        data.deductedCards += 1;
+        // 重新计算可用卡数
+        data.meetCard = Math.max(0, data.generatedCards - data.deductedCards);
+        saveData(data);
+
+        alert(`💔 已扣除1张见面卡！\n已生成卡数：${data.generatedCards}张 | 已扣除卡数：${data.deductedCards}张\n当前剩余可用卡：${data.meetCard}张`);
+        // 重新渲染页面，更新数据显示
+        renderAll();
+      }
+
+      /**
+       * 执行打卡操作（核心业务：早安/晚安打卡）
+       * @param {string} type - 打卡类型（morning/night）
+       */
+      function check(type) {
+        // 校验1：禁止未来日期打卡
+        if (isFutureDate(selectedDateStr)) {
+          alert(`⏰ ${selectedDateStr} 还没到哦，不能提前打卡～`);
+          return;
+        }
+
+        // 校验2：禁止相识日前打卡
+        if (!isAfterStartDate(selectedDateStr)) {
+          alert(`💞 只能从${MEET_DAY_STR}（相识日）开始打卡哦～`);
+          return;
+        }
+
+        const data = getData();
+        // 初始化日期记录（首次打卡该日期时）
+        if (!data.records[selectedDateStr]) {
+          data.records[selectedDateStr] = { morning: false, night: false };
+        }
+
+        // 更新打卡状态为已打卡
+        data.records[selectedDateStr][type] = true;
+        saveData(data);
+
+        // 更新见面卡奖励（检查是否满足30天条件）
+        checkReward();
+
+        // 播放打卡成功音效
+        playSound();
+
+        // 新增：播放飘爱心动画（连续生成多个爱心）
+        for (let i = 0; i < 30; i++) {
+          setTimeout(() => createHeart(), i * 100); // 每隔100ms生成一个爱心
+        }
+        // 提示打卡成功
+        alert(`✅ ${selectedDateStr} 的${type === 'morning' ? '早安' : '晚安'}打卡成功！`);
+
+        // 重新渲染页面，更新按钮状态和统计数据
+        renderAll();
+      }
+
+      // ===================== 页面渲染逻辑 =====================
+      /**
+       * 初始化日历视图（默认显示相识日所在月份，当前日期在相识日后则显示当前月）
+       */
+      function initCalendarView() {
+        currentViewYear = START_DATE.getFullYear();
+        currentViewMonth = START_DATE.getMonth() + 1;
+
+        // 优化：当前日期在相识日之后，显示当前月份（更符合用户预期）
+        if (now > START_DATE) {
+          currentViewYear = now.getFullYear();
+          currentViewMonth = now.getMonth() + 1;
+        }
+      }
+
+      /**
+       * 更新日历导航按钮状态（禁止切换到2026年2月之前）
+       */
+      function updateNavBtnStatus() {
+        const prevBtn = document.getElementById("prevMonth");
+        const isStartMonth = currentViewYear === 2026 && currentViewMonth === 2;
+
+        // 禁用上月按钮：已到最早月份（相识日所在月）
+        if (isStartMonth) {
+          prevBtn.classList.add("disabled");
+          prevBtn.disabled = true;
+        } else {
+          prevBtn.classList.remove("disabled");
+          prevBtn.disabled = false;
+        }
+      }
+
+      /**
+       * 更新选中日期提示文本（显示当前选中日期的状态）
+       */
+      function updateSelectedDateText() {
+        const textEl = document.getElementById("selectedDateText");
+        if (selectedDateStr === todayDateStr) {
+          textEl.innerText = "当前选择：今日";
+        } else if (isFutureDate(selectedDateStr)) {
+          textEl.innerText = `当前选择：${selectedDateStr}（未到时间）`;
+        } else {
+          textEl.innerText = `当前选择：${selectedDateStr}（让本小姐为他补张卡吧~）`;
+        }
+      }
+
+      /**
+       * 更新时间和统计信息（1秒刷新一次，显示实时时间和数据）
+       */
+      function updateTimeInfo() {
+        const now = new Date();
+        // 格式化当前时间（含秒，实时更新）
+        const currentTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+        // 计算相识天数（从相识日到现在的天数）
+        const timeDiff = now - START_DATE;
+        const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+        // 更新页面显示数据
+        const data = getData();
+        document.getElementById("totalDays").innerText = calculateCompleteDays();
+        document.getElementById("meetCardNum").innerText = data.meetCard || 0;
+        document.getElementById("todayText").innerHTML = `今天是：${currentTime}\n我们已经认识<span style="color: #e65a7c; font-weight: 700; font-size: 20px;">${daysDiff}</span>天啦！`;
+      }
+
+      /**
+       * 渲染打卡按钮状态（仅控制早安/晚安按钮，兑换/生气按钮默认高亮）
+       */
+      function renderBtns() {
+        const data = getData();
+        // 确保字段初始化（避免undefined）
+        data.generatedCards = data.generatedCards || 0;
+        data.deductedCards = data.deductedCards || 0;
+        data.meetCard = Math.max(0, data.generatedCards - data.deductedCards);
+
+        // 获取选中日期的打卡记录（无记录则初始化为未打卡）
+        const rec = data.records[selectedDateStr] || { morning: false, night: false };
+        const btnM = document.getElementById("btnMorning");
+        const btnN = document.getElementById("btnNight");
+
+        // 重置早安/晚安按钮样式（避免样式叠加）
+        btnM.className = "btn morning";
+        btnN.className = "btn night";
+
+        // 禁用未来日期的打卡按钮
+        if (isFutureDate(selectedDateStr)) {
+          btnM.classList.add("disabled");
+          btnN.classList.add("disabled");
+          btnM.disabled = true;
+          btnN.disabled = true;
+        } else {
+          // 启用按钮
+          btnM.disabled = false;
+          btnN.disabled = false;
+
+          // 标记已完成的打卡（添加done样式，禁用按钮）
+          if (rec.morning) {
+            btnM.classList.add("done");
+            btnM.disabled = true;
+          }
+          if (rec.night) {
+            btnN.classList.add("done");
+            btnN.disabled = true;
+          }
+        }
+
+        // 兑换/生气按钮始终保持启用和高亮样式
+        const exchangeBtn = document.getElementById("exchangeBtn");
+        const angryBtn = document.getElementById("angryBtn");
+        exchangeBtn.disabled = false;
+        angryBtn.disabled = false;
+        exchangeBtn.classList.remove("disabled");
+        angryBtn.classList.remove("disabled");
+
+        // 更新选中日期文本
+        updateSelectedDateText();
+      }
+
+      /**
+       * 渲染统计信息（启动定时器，实时更新时间和数据）
+       */
+      function renderStats() {
+        updateTimeInfo();
+        // 清理旧定时器，避免多个定时器同时运行
+        if (timeUpdateTimer) clearInterval(timeUpdateTimer);
+        // 1秒更新一次时间和统计数据
+        timeUpdateTimer = setInterval(updateTimeInfo, 1000);
+      }
+
+      /**
+       * 渲染日历（核心视图：显示年月、日期、打卡状态、相识日标记等）
+       */
+      function renderCalendar() {
+        const y = currentViewYear;
+        const m = currentViewMonth;
+        // 更新日历标题（显示当前年月）
+        document.getElementById("monthTitle").innerText = `${y}年${m}月`;
+
+        // 计算当月第一天是星期几（0=周日，6=周六）
+        const firstDay = new Date(y, m - 1, 1).getDay();
+        // 计算当月总天数
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const box = document.getElementById("daysContainer");
+        // 清空日历容器（避免重复渲染）
+        box.innerHTML = "";
+        const data = getData();
+
+        // 更新导航按钮状态
+        updateNavBtnStatus();
+
+        // 渲染月初空白格子（补全星期）
+        for (let i = 0; i < firstDay; i++) {
+          const d = document.createElement("div");
+          d.className = "day hidden";
+          box.appendChild(d);
+        }
+
+        // 渲染当月所有日期
+        for (let day = 1; day <= daysInMonth; day++) {
+          // 格式化日期字符串
+          const dateStr = `${y}-${String(m).padStart(2, 0)}-${String(day).padStart(2, 0)}`;
+          const currentDate = new Date(y, m - 1, day);
+          const d = document.createElement("div");
+
+          // 隐藏相识日前的日期
+          if (currentDate < START_DATE) {
+            d.className = "day hidden";
+          } else {
+            d.className = "day";
+
+            // 标记未来日期（添加future样式）
+            if (isFutureDate(dateStr)) {
+              d.classList.add("future");
+              // 未来日期点击提示
+              d.addEventListener("click", () => {
+                alert(`⏰ ${dateStr} 还没到时间哦，不能提前打卡～`);
+              });
+            }
+
+            // 标记选中日期（添加selected样式）
+            if (dateStr === selectedDateStr) {
+              d.classList.add("selected");
+            }
+
+            // 添加日期数字
+            const num = document.createElement("div");
+            num.innerText = day;
+            d.appendChild(num);
+
+            // 标记相识日（添加meet-day样式+标签）
+            if (dateStr === MEET_DAY_STR) {
+              d.classList.add("meet-day");
+              const meetLabel = document.createElement("div");
+              meetLabel.className = "meet-day-label";
+              meetLabel.innerText = "相识日";
+              d.appendChild(meetLabel);
+            }
+
+            // 标记打卡状态
+            if (data.records[dateStr]) {
+              const record = data.records[dateStr];
+              // 完整打卡（早安+晚安）：添加full-active样式+标记点
+              if (record.morning && record.night) {
+                d.classList.add("full-active");
+                const mark = document.createElement("div");
+                mark.className = "mark";
+                d.appendChild(mark);
+              }
+              // 部分打卡（仅早安或晚安）：添加half-active样式
+              else if (record.morning || record.night) {
+                d.classList.add("half-active");
+              }
+            }
+
+            // 标记今日（添加today样式）
+            if (dateStr === todayDateStr) {
+              d.classList.add("today");
+            }
+
+            // 绑定日期点击事件（非未来日期）：切换选中日期
+            if (!isFutureDate(dateStr)) {
+              d.addEventListener("click", () => {
+                selectedDateStr = dateStr;
+                renderAll();
+              });
+            }
+          }
+
+          box.appendChild(d);
+        }
+      }
+
+      /**
+       * 切换日历月份（上月/下月）
+       * @param {number} delta - 切换方向（-1：上月，1：下月）
+       */
+      function changeMonth(delta) {
+        let newMonth = currentViewMonth + delta;
+        let newYear = currentViewYear;
+
+        // 处理月份边界（1月切换到12月，12月切换到1月）
+        if (newMonth < 1) {
+          newYear--;
+          newMonth = 12;
+        }
+        if (newMonth > 12) {
+          newYear++;
+          newMonth = 1;
+        }
+
+        // 禁止切换到2026年2月之前（相识日前）
+        if (newYear < 2026 || (newYear === 2026 && newMonth < 2)) {
+          return;
+        }
+
+        // 更新当前视图年月，重新渲染日历
+        currentViewMonth = newMonth;
+        currentViewYear = newYear;
+        renderCalendar();
+      }
+
+      /**
+       * 渲染所有页面元素（统一入口，更新按钮、统计、日历）
+       */
+      function renderAll() {
+        renderBtns();
+        renderStats();
+        renderCalendar();
+      }
+
+      // ===================== 事件绑定 =====================
+      /**
+       * 绑定所有页面事件（统一管理事件监听）
+       */
+      function bindEvents() {
+        // 打卡按钮事件
+        document.getElementById("btnMorning").onclick = () => check("morning");
+        document.getElementById("btnNight").onclick = () => check("night");
+
+        // 日历切换按钮事件
+        document.getElementById("prevMonth").onclick = () => changeMonth(-1);
+        document.getElementById("nextMonth").onclick = () => changeMonth(1);
+
+        // 核心业务按钮事件
+        document.getElementById("exchangeBtn").onclick = exchange;
+        document.getElementById("angryBtn").onclick = deductCard;
+
+        // 简化的音频按钮事件
+        document.getElementById("audioBtn").onclick = toggleAudio;
+
+        // 页面卸载时清理定时器（避免内存泄漏）
+        window.addEventListener('beforeunload', () => {
+          if (timeUpdateTimer) clearInterval(timeUpdateTimer);
+          // 页面关闭时暂停音频
+          if (audioElement) audioElement.pause();
+        });
+      }
+
+      /**
+ * 创建并播放飘爱心动画
+ */
+function createHeart() {
+  // 创建爱心元素
+  const heart = document.createElement('div');
+  heart.innerHTML = '❤️'; // 爱心 emoji
+  heart.style.position = 'fixed';
+  heart.style.fontSize = '24px';
+  heart.style.pointerEvents = 'none'; // 不影响点击事件
+  heart.style.zIndex = '9999';
+
+  // 随机水平位置（屏幕宽度范围内）
+  const startX = Math.random() * window.innerWidth;
+  heart.style.left = `${startX}px`;
+  heart.style.bottom = '0px'; // 从底部开始
+
+  // 随机动画参数
+  const duration = 2 + Math.random() * 3; // 动画持续时间 2~5 秒
+  const endY = -200; // 上升终点（超出屏幕顶部）
+  const endX = startX + (Math.random() - 0.5) * 200; // 水平偏移 ±100px
+
+  // 设置动画样式
+  heart.style.transition = `all ${duration}s ease-out`;
+  heart.style.opacity = '1';
+  document.body.appendChild(heart);
+
+  // 触发动画
+  setTimeout(() => {
+    heart.style.transform = `translate(${endX - startX}px, ${endY}px)`;
+    heart.style.opacity = '0';
+  }, 10);
+
+  // 动画结束后移除元素
+  setTimeout(() => {
+    document.body.removeChild(heart);
+  }, duration * 2000);
+}
+
+      // ===================== 应用初始化 =====================
+      /**
+       * 初始化应用（启动入口）
+       */
+      function initApp() {
+        // 初始化日历视图
+        initCalendarView();
+        // 检查并更新见面卡奖励
+        checkReward();
+        // 初始化音频
+        initAudio();
+        // 绑定所有事件
+        bindEvents();
+        // 渲染所有页面元素
+        renderAll();
+      }
+
+      // 启动应用（页面加载完成后执行）
+      initApp();
+  </script>
+
+</body>
+
+</html>
